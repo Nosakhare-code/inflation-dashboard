@@ -57,6 +57,9 @@ You can upload a CSV with the same structure as the training data to generate yo
 6. Downloadable results and visualizations
 
 You can view the full data analysis and preprocessing steps here: https://github.com/Nosakhare-code/inflation-dashboard/blob/main/CBN%20Money%20supply%20and%20Inflation.ipynb
+## Note
+### it appears that there is multicollinearity on the correlation analysis. no owrries, Tree models(e.g Randomforest ) don’t estimate coefficients like regression.
+### They split the data based on thresholds (e.g., “moneySupply_M3 > 2000”), not on linear relationships.### 
 
 ## Contact
 Author: Emmanuel Nosakhare Asowata
