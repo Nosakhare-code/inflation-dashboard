@@ -46,7 +46,7 @@ st.markdown("""
 st.divider()
 
 # --- Data Dictionary Section ---
-with st.expander(" Data Dictionary (Click to Expand)"):
+with st.expander("📘 Data Dictionary (Click to Expand)"):
     typing_effect("Inflation Variables (from NBS CPI data)", size="###")
     st.markdown("""
     | Variable | Description | Unit / Meaning |
@@ -72,8 +72,13 @@ typing_effect("Exploratory Data Analysis", size="##")
 
 # --- Load Data ---
 merge_df = pd.read_csv("merge_data.csv")
-merge_df["period"] = pd.to_datetime(merge_df["period"])
-merge_df = merge_df.sort_values("period")
+
+# Check if 'period' exists before converting
+if "period" in merge_df.columns:
+    merge_df["period"] = pd.to_datetime(merge_df["period"])
+    merge_df = merge_df.sort_values("period")
+else:
+    st.warning("⚠️ The 'period' column is missing in merge_data.csv — plots depending on time may not render properly.")
 
 # Add download buttons for data
 st.download_button(
@@ -83,56 +88,70 @@ st.download_button(
     mime="text/csv"
 )
 
-# spacing
 st.divider()
 
 # --- Inflation Trend Plot ---
-inflation_vars = ["allItemsYearOn", "foodYearOn", "allItemsLessFrmProdAndEnergyYearOn"]
-fig, ax = plt.subplots(figsize=(12,6))
-for col in inflation_vars:
-    ax.plot(merge_df["period"], merge_df[col], label=col)
-ax.set_title("Inflation Trends Over Time (YoY %)")
-ax.set_xlabel("Period")
-ax.set_ylabel("Inflation Rate (%)")
-ax.legend(title="Inflation Type")
-st.pyplot(fig)
+if "period" in merge_df.columns:
+    inflation_vars = ["allItemsYearOn", "foodYearOn", "allItemsLessFrmProdAndEnergyYearOn"]
+    fig, ax = plt.subplots(figsize=(12,6))
+    for col in inflation_vars:
+        if col in merge_df.columns:
+            ax.plot(merge_df["period"], merge_df[col], label=col)
+    ax.set_title("Inflation Trends Over Time (YoY %)")
+    ax.set_xlabel("Period")
+    ax.set_ylabel("Inflation Rate (%)")
+    ax.legend(title="Inflation Type")
+    st.pyplot(fig)
 
-typing_effect(
-    "🟦 Overall inflation shows steady increases from mid-2021 with over 40% growth since 2008. "
-    "\n🟨 Food inflation is more volatile and higher — often driving overall inflation (demand-pull). "
-    "\n🟩 Core inflation is smoother since it excludes farm produce and energy (cost-push).",
-    delay=0.01
-)
+    typing_effect(
+        "🟦 Overall inflation shows steady increases from mid-2021 with over 40% growth since 2008. "
+        "\n🟨 Food inflation is more volatile and higher — often driving overall inflation (demand-pull). "
+        "\n🟩 Core inflation is smoother since it excludes farm produce and energy (cost-push).",
+        delay=0.01
+    )
 
 # --- Correlation Heatmap ---
-corr = merge_df[["allItemsYearOn", "moneySupply_M3", "moneySupply_M2", "narrowMoney"]].corr()
-fig, ax = plt.subplots(figsize=(6,4))
-sns.heatmap(corr, annot=True, cmap="Blues", fmt=".2f", ax=ax)
-st.pyplot(fig)
-typing_effect("💡 High positive correlation (close to +1) → strong relationship between money supply and inflation.", delay=0.02)
+numeric_cols = ["allItemsYearOn", "moneySupply_M3", "moneySupply_M2", "narrowMoney"]
+available = [col for col in numeric_cols if col in merge_df.columns]
+if len(available) > 1:
+    corr = merge_df[available].corr()
+    fig, ax = plt.subplots(figsize=(6,4))
+    sns.heatmap(corr, annot=True, cmap="Blues", fmt=".2f", ax=ax)
+    st.pyplot(fig)
+    typing_effect("💡 High positive correlation → strong link between money supply and inflation.", delay=0.02)
 
-# --- Distribution Plots ---
-typing_effect("📈 Distribution of Inflation", size="###")
-fig, ax = plt.subplots(figsize=(8,5))
-sns.histplot(merge_df["allItemsYearOn"], bins=30, kde=True, color="skyblue", ax=ax)
-st.pyplot(fig)
-typing_effect("Non-symmetrical distribution → presence of outliers.", delay=0.02)
+# --- Distributions ---
+if "allItemsYearOn" in merge_df.columns:
+    typing_effect("📈 Distribution of Inflation", size="###")
+    fig, ax = plt.subplots(figsize=(8,5))
+    sns.histplot(merge_df["allItemsYearOn"], bins=30, kde=True, color="skyblue", ax=ax)
+    st.pyplot(fig)
+    typing_effect("Non-symmetrical distribution → presence of outliers.", delay=0.02)
 
-typing_effect("💵 Distribution of Broad Money Supply (M3)", size="###")
-fig, ax = plt.subplots(figsize=(8,5))
-sns.histplot(merge_df["moneySupply_M3"], bins=30, kde=True, color="lightgreen", ax=ax)
-st.pyplot(fig)
-typing_effect("Right-skewed distribution → concentration of outliers at the end.", delay=0.02)
+if "moneySupply_M3" in merge_df.columns:
+    typing_effect("💵 Distribution of Broad Money Supply (M3)", size="###")
+    fig, ax = plt.subplots(figsize=(8,5))
+    sns.histplot(merge_df["moneySupply_M3"], bins=30, kde=True, color="lightgreen", ax=ax)
+    st.pyplot(fig)
+    typing_effect("Right-skewed distribution → concentration of outliers at the end.", delay=0.02)
 
 # --- Model Section ---
 st.divider()
 typing_effect("🤖 Inflation Prediction Model", size="##")
 
-# ✅ Load your GridSearchCV model instead of single model
-grid_search = joblib.load("inflation_model.pkl")  # <-- model name
-
-# Extract the best estimator (trained model)
-model = grid_search.best_estimator_
+# Load model safely
+try:
+    model_file = joblib.load("inflation_model.pkl")
+    # Detect if it's a GridSearchCV or direct estimator
+    if hasattr(model_file, "best_estimator_"):
+        model = model_file.best_estimator_
+        best_params = model_file.best_params_
+    else:
+        model = model_file
+        best_params = "Not available (base model only)"
+except Exception as e:
+    st.error(f"❌ Error loading model: {e}")
+    st.stop()
 
 # Load test data
 x_test = pd.read_csv("x_test.csv")
@@ -173,14 +192,17 @@ st.download_button(
 # --- Model Performance Info ---
 typing_effect(
     f"🏆 Best model: **{type(model).__name__}**\n\n"
-    f"Best parameters: `{grid_search.best_params_}`",
+    f"Best parameters: `{best_params}`",
     delay=0.015
 )
 
 # --- Feature Importance ---
-typing_effect("💡 Feature Importance in Predicting Inflation", size="###")
-importances = model.feature_importances_
-features = x_test.columns
-fig, ax = plt.subplots(figsize=(8,5))
-sns.barplot(x=importances, y=features, hue=features, palette="viridis", legend=False, ax=ax)
-st.pyplot(fig)
+if hasattr(model, "feature_importances_"):
+    typing_effect("💡 Feature Importance in Predicting Inflation", size="###")
+    importances = model.feature_importances_
+    features = x_test.columns
+    fig, ax = plt.subplots(figsize=(8,5))
+    sns.barplot(x=importances, y=features, hue=features, palette="viridis", legend=False, ax=ax)
+    st.pyplot(fig)
+else:
+    st.info("ℹ️ This model type does not support feature importance.")
