@@ -24,7 +24,7 @@ st.title("📈 Inflation Inference Dashboard")
 # --- Intro with typing effect ---
 intro = (
     "This project merges Inflation, Crude Oil, MPR, Money Supply, etc., for descriptive "
-    "and inferential analysis on prices of goods and services in Nigeria — enabling "
+    "and inferential analysis on prices of goods and services in Nigeria enabling "
     "data-driven decision-making to achieve macroeconomic goals.\n\n"
     "It explores relationships among variables to guide contractionary and expansionary "
     "monetary policies.\n\n"
@@ -97,8 +97,8 @@ st.pyplot(fig)
 
 typing_effect(
     "🟦 Overall inflation shows steady increases from mid-2021 with over 40% growth since 2008.\n"
-    "🟨 Food inflation is more volatile and higher — often driving overall inflation.\n"
-    "🟩 Core inflation is smoother since it excludes farm produce and energy.",
+    "🟨 Food inflation is more volatile and higher often driving overall inflation.\n"
+    "🟩 Core inflation is smoother since it excludes farm produce and energy.\n",
     delay=0.01
 )
 
